@@ -21,6 +21,8 @@ const oAuth2Client = new OAuth2(
   process.env.REDIRECT_URI
 );
 
+let oAuth2Tokens = {};
+
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello, TypeScript with Express!");
 });
@@ -36,26 +38,28 @@ app.get("/auth", (req, res) => {
   res.redirect(authUrl);
 });
 
-app.get("/auth/callback", (req, res) => {
-  const { code } = req.query;
+app.get("/auth/callback", async (req, res) => {
+  const code = req.query.code;
 
   try {
-    console.log(code);
-    res.status(200).json({ success: true });
+    if (!code) {
+      res.status(400).send("No code received");
+      return;
+    }
+    const { tokens } = await oAuth2Client.getToken(code.toString());
+    console.log(tokens);
+    oAuth2Client.setCredentials(tokens);
+    oAuth2Tokens = tokens;
+    res.send("Authentication successful! You can now send emails.");
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("Error getting tokens:", error);
+    res.status(500).send("Authentication failed");
   }
 });
 
-// app.post("/login", (req: Request, res: Response) => {
-//   const { email } = req.body;
-//   if (!email) {
-//     res.status(400).json({ message: "No email specified!!" });
-//     return;
-//   }
-
-//   res.status(200).json({ success: true, email });
+// app.post("/send-email", async (req, res) => {
+//   try {
+//   } catch (error) { }
 // });
 
 app.listen(port, () => {
